@@ -1,30 +1,25 @@
-import api from './api';
+import apiInstance from './api';
 
 const pantryService = {
   getItems: (category = null) => {
     const params = category ? `?category=${category}` : '';
-    return api.get(`/pantry${params}`);
+    return apiInstance.get(`/pantry${params}`);
   },
 
-  addItem: (itemData) => {
-    return api.post('/pantry', itemData);
-  },
+  addItem: (itemData) =>
+    apiInstance.post('/pantry', itemData),
 
-  updateItem: (itemId, itemData) => {
-    return api.put(`/pantry/${itemId}`, itemData);
-  },
+  updateItem: (id, itemData) =>
+    apiInstance.put(`/pantry/${id}`, itemData),
 
-  deleteItem: (itemId) => {
-    return api.delete(`/pantry/${itemId}`);
-  },
+  deleteItem: (id) =>
+    apiInstance.delete(`/pantry/${id}`),
 
-  getExpiringItems: (days = 7) => {
-    return api.get(`/pantry/expiring?days=${days}`);
-  },
+  getExpiringItems: (days = 7) =>
+    apiInstance.get(`/pantry/expiring?days=${days}`),
 
-  getByCategory: (category) => {
-    return api.get(`/pantry/category/${category}`);
-  }
+  getByCategory: (category) =>
+    apiInstance.get(`/pantry/category/${category}`)
 };
 
 export default pantryService;

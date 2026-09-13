@@ -1,34 +1,28 @@
-import api from './api';
+import apiInstance from './api';
 
 const shoppingListService = {
   getShoppingLists: (status = null) => {
     const params = status ? `?status=${status}` : '';
-    return api.get(`/shopping${params}`);
+    return apiInstance.get(`/shopping${params}`);
   },
 
-  createShoppingList: (listData) => {
-    return api.post('/shopping', listData);
-  },
+  createShoppingList: (listData) =>
+    apiInstance.post('/shopping', listData),
 
-  updateShoppingList: (listId, listData) => {
-    return api.put(`/shopping/${listId}`, listData);
-  },
+  updateShoppingList: (id, listData) =>
+    apiInstance.put(`/shopping/${id}`, listData),
 
-  deleteShoppingList: (listId) => {
-    return api.delete(`/shopping/${listId}`);
-  },
+  deleteShoppingList: (id) =>
+    apiInstance.delete(`/shopping/${id}`),
 
-  addItemToList: (listId, itemData) => {
-    return api.post(`/shopping/${listId}/items`, itemData);
-  },
+  addItemToList: (listId, itemData) =>
+    apiInstance.post(`/shopping/${listId}/items`, itemData),
 
-  updateListItem: (listId, itemId, itemData) => {
-    return api.put(`/shopping/${listId}/items/${itemId}`, itemData);
-  },
+  updateListItem: (listId, itemId, itemData) =>
+    apiInstance.put(`/shopping/${listId}/items/${itemId}`, itemData),
 
-  deleteListItem: (listId, itemId) => {
-    return api.delete(`/shopping/${listId}/items/${itemId}`);
-  }
+  deleteListItem: (listId, itemId) =>
+    apiInstance.delete(`/shopping/${listId}/items/${itemId}`)
 };
 
 export default shoppingListService;

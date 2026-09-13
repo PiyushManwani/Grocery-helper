@@ -1,22 +1,20 @@
-import api from './api';
+import apiInstance from './api';
 
 const budgetService = {
   getBudget: (month = null) => {
     const params = month ? `?month=${month}` : '';
-    return api.get(`/budget${params}`);
+    return apiInstance.get(`/budget${params}`);
   },
 
-  setBudgetLimit: (budgetLimit, month = null) => {
-    return api.post('/budget/set-limit', { budgetLimit, month });
-  },
+  setBudgetLimit: (budgetLimit, month = null) =>
+    apiInstance.post('/budget/set-limit', { budgetLimit, month }),
 
-  addExpense: (expenseData) => {
-    return api.post('/budget/add-expense', expenseData);
-  },
+  addExpense: (amount, category, description, month = null) =>
+    apiInstance.post('/budget/add-expense', { amount, category, description, month }),
 
   getBudgetSummary: (month = null) => {
     const params = month ? `?month=${month}` : '';
-    return api.get(`/budget/summary${params}`);
+    return apiInstance.get(`/budget/summary${params}`);
   }
 };
 

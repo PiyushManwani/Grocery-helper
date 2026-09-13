@@ -1,21 +1,17 @@
-import api from './api';
+import apiInstance from './api';
 
 const aiService = {
-  getRecipeSuggestions: () => {
-    return api.post('/ai/recipes');
-  },
+  getRecipeSuggestions: () =>
+    apiInstance.post('/ai/recipes'),
 
-  getBudgetTips: () => {
-    return api.post('/ai/budget-tips');
-  },
+  getBudgetTips: () =>
+    apiInstance.post('/ai/budget-tips'),
 
-  getSmartShopping: () => {
-    return api.post('/ai/smart-shopping');
-  },
+  getSmartShopping: () =>
+    apiInstance.post('/ai/smart-shopping'),
 
-  getMealPlan: (days = 7) => {
-    return api.post(`/ai/meal-plan?days=${days}`);
-  }
+  getMealPlan: (days = 7) =>
+    apiInstance.post('/ai/meal-plan', { days })
 };
 
 export default aiService;
