@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
-import './Login.css';
+import '../styles/Login.css';
 
 const Login = ({ onLoginSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -10,8 +10,9 @@ const Login = ({ onLoginSuccess }) => {
     password: '',
     confirmPassword: ''
   });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
@@ -28,19 +29,38 @@ const Login = ({ onLoginSuccess }) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
       if (isLogin) {
+        // Login
+        if (!formData.email || !formData.password) {
+          setError('Please fill in all fields');
+          setLoading(false);
+          return;
+        }
+
         const response = await axios.post(`${API_URL}/auth/login`, {
           email: formData.email,
           password: formData.password
         });
 
-        localStorage.setItem('token', response.data.data.token);
-        localStorage.setItem('userId', response.data.data.userId);
-        localStorage.setItem('userName', response.data.data.name);
-        onLoginSuccess();
+        if (response.data.success) {
+          localStorage.setItem('token', response.data.data.token);
+          localStorage.setItem('user', JSON.stringify(response.data.data));
+          setSuccess('Login successful!');
+          setTimeout(() => {
+            onLoginSuccess(response.data.data);
+          }, 1000);
+        }
       } else {
+        // Register
+        if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
+          setError('Please fill in all fields');
+          setLoading(false);
+          return;
+        }
+
         if (formData.password !== formData.confirmPassword) {
           setError('Passwords do not match');
           setLoading(false);
@@ -54,10 +74,14 @@ const Login = ({ onLoginSuccess }) => {
           confirmPassword: formData.confirmPassword
         });
 
-        localStorage.setItem('token', response.data.data.token);
-        localStorage.setItem('userId', response.data.data.userId);
-        localStorage.setItem('userName', response.data.data.name);
-        onLoginSuccess();
+        if (response.data.success) {
+          localStorage.setItem('token', response.data.data.token);
+          localStorage.setItem('user', JSON.stringify(response.data.data));
+          setSuccess('Registration successful!');
+          setTimeout(() => {
+            onLoginSuccess(response.data.data);
+          }, 1000);
+        }
       }
     } catch (err) {
       setError(err.response?.data?.message || 'An error occurred');
@@ -66,37 +90,35 @@ const Login = ({ onLoginSuccess }) => {
     }
   };
 
-  const toggleMode = () => {
-    setIsLogin(!isLogin);
-    setFormData({ name: '', email: '', password: '', confirmPassword: '' });
-    setError('');
-  };
-
   return (
     <div className="login-container">
       <div className="login-card">
-        <h1 className="login-title">🛒 Grocery Helper</h1>
-        <p className="login-subtitle">Manage your groceries smartly</p>
+        <div className="login-header">
+          <h1>🛒 Grocery Helper</h1>
+          <p>{isLogin ? 'Welcome Back!' : 'Join Us Today!'}</p>
+        </div>
 
         <form onSubmit={handleSubmit} className="login-form">
           {!isLogin && (
             <div className="form-group">
-              <label>Full Name</label>
+              <label htmlFor="name">Full Name</label>
               <input
                 type="text"
+                id="name"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="Enter your name"
+                placeholder="Enter your full name"
                 required={!isLogin}
               />
             </div>
           )}
 
           <div className="form-group">
-            <label>Email</label>
+            <label htmlFor="email">Email</label>
             <input
               type="email"
+              id="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
@@ -106,9 +128,10 @@ const Login = ({ onLoginSuccess }) => {
           </div>
 
           <div className="form-group">
-            <label>Password</label>
+            <label htmlFor="password">Password</label>
             <input
               type="password"
+              id="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
@@ -119,9 +142,10 @@ const Login = ({ onLoginSuccess }) => {
 
           {!isLogin && (
             <div className="form-group">
-              <label>Confirm Password</label>
+              <label htmlFor="confirmPassword">Confirm Password</label>
               <input
                 type="password"
+                id="confirmPassword"
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
@@ -132,28 +156,29 @@ const Login = ({ onLoginSuccess }) => {
           )}
 
           {error && <div className="error-message">{error}</div>}
+          {success && <div className="success-message">{success}</div>}
 
-          <button type="submit" className="login-btn" disabled={loading}>
+          <button type="submit" className="btn-submit" disabled={loading}>
             {loading ? 'Loading...' : isLogin ? 'Login' : 'Register'}
           </button>
         </form>
 
-        <div className="toggle-mode">
-          {isLogin ? (
-            <p>
-              Don't have an account?{' '}
-              <button onClick={toggleMode} className="toggle-btn">
-                Register
-              </button>
-            </p>
-          ) : (
-            <p>
-              Already have an account?{' '}
-              <button onClick={toggleMode} className="toggle-btn">
-                Login
-              </button>
-            </p>
-          )}
+        <div className="login-footer">
+          <p>
+            {isLogin ? "Don't have an account? " : 'Already have an account? '}
+            <button
+              type="button"
+              className="btn-switch"
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setError('');
+                setSuccess('');
+                setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+              }}
+            >
+              {isLogin ? 'Register' : 'Login'}
+            </button>
+          </p>
         </div>
       </div>
     </div>
