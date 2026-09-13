@@ -1,44 +1,64 @@
-import React, { useContext } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { AuthContext } from '../App';
-import './Navigation.css';
+import React, { useState, useEffect } from 'react';
 
-function Navigation() {
-  const { user, handleLogout } = useContext(AuthContext);
-  const navigate = useNavigate();
-
-  const logout = () => {
-    handleLogout();
-    navigate('/login');
-  };
+const Navigation = ({ user, onLogout }) => {
+  const [activeTab, setActiveTab] = useState('pantry');
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   return (
     <nav className="navbar">
       <div className="nav-container">
-        <Link to="/" className="nav-logo">
-          🛒 Grocery Helper
-        </Link>
-        <ul className="nav-menu">
-          <li className="nav-item">
-            <Link to="/pantry" className="nav-link">Pantry</Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/budget" className="nav-link">Budget</Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/shopping" className="nav-link">Shopping List</Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/ai" className="nav-link">AI Assistant</Link>
-          </li>
-          <li className="nav-item user-menu">
-            <span className="user-name">{user?.name}</span>
-            <button onClick={logout} className="logout-btn">Logout</button>
-          </li>
-        </ul>
+        <div className="nav-brand">
+          <h1>🛒 Grocery Helper</h1>
+        </div>
+
+        <div className="nav-tabs">
+          <button
+            className={`nav-tab ${activeTab === 'pantry' ? 'active' : ''}`}
+            onClick={() => setActiveTab('pantry')}
+          >
+            📦 Pantry
+          </button>
+          <button
+            className={`nav-tab ${activeTab === 'budget' ? 'active' : ''}`}
+            onClick={() => setActiveTab('budget')}
+          >
+            💰 Budget
+          </button>
+          <button
+            className={`nav-tab ${activeTab === 'shopping' ? 'active' : ''}`}
+            onClick={() => setActiveTab('shopping')}
+          >
+            🛍️ Shopping
+          </button>
+          <button
+            className={`nav-tab ${activeTab === 'ai' ? 'active' : ''}`}
+            onClick={() => setActiveTab('ai')}
+          >
+            🤖 AI Helper
+          </button>
+        </div>
+
+        <div className="nav-user">
+          <div className="user-info">
+            <span className="user-name">{user?.name || 'User'}</span>
+            <button
+              className="user-menu-btn"
+              onClick={() => setShowUserMenu(!showUserMenu)}
+            >
+              ⚙️
+            </button>
+          </div>
+          {showUserMenu && (
+            <div className="user-menu">
+              <button onClick={onLogout} className="btn-logout">
+                🚪 Logout
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </nav>
   );
-}
+};
 
 export default Navigation;

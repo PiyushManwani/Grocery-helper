@@ -6,31 +6,34 @@ const AIAssistant = ({ user }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState('');
-  const [mealDays, setMealDays] = useState('7');
+  const [mealDays, setMealDays] = useState(7);
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
   const token = localStorage.getItem('token');
 
-  const handleGetSuggestions = async (endpoint) => {
+  const endpoints = {
+    recipes: '/ai/recipes',
+    budget: '/ai/budget-tips',
+    shopping: '/ai/smart-shopping',
+    meals: '/ai/meal-plan'
+  };
+
+  const handleGetSuggestion = async (endpoint) => {
+    setLoading(true);
+    setError('');
+    setResult('');
+
     try {
-      setLoading(true);
-      setError('');
-      setResult('');
-
-      let url = `${API_URL}/ai/${endpoint}`;
-      if (endpoint === 'meal-plan') {
-        url += `?days=${mealDays}`;
-      }
-
-      const response = await axios.post(url, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (response.data.data.suggestions || response.data.data.tips || response.data.data.recommendations || response.data.data.mealPlan) {
-        setResult(response.data.data.suggestions || response.data.data.tips || response.data.data.recommendations || response.data.data.mealPlan);
-      } else {
-        setResult(JSON.stringify(response.data.data, null, 2));
-      }
+      const params = endpoint === endpoints.meals ? { days: mealDays } : {};
+      const response = await axios.post(
+        `${API_URL}${endpoint}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params
+        }
+      );
+      setResult(response.data.data);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to get suggestions');
     } finally {
@@ -39,30 +42,33 @@ const AIAssistant = ({ user }) => {
   };
 
   return (
-    <div className="ai-container">
-      <h2>✨ AI Assistant</h2>
+    <div className="ai-assistant-container">
+      <h2>🤖 AI Assistant</h2>
+      <p className="subtitle">Get smart suggestions powered by Mistral AI</p>
 
-      <div className="ai-tabs">
+      {error && <div className="error-alert">{error}</div>}
+
+      <div className="tabs">
         <button
-          className={`tab-button ${activeTab === 'recipes' ? 'active' : ''}`}
+          className={`tab ${activeTab === 'recipes' ? 'active' : ''}`}
           onClick={() => setActiveTab('recipes')}
         >
           🍳 Recipes
         </button>
         <button
-          className={`tab-button ${activeTab === 'budget' ? 'active' : ''}`}
+          className={`tab ${activeTab === 'budget' ? 'active' : ''}`}
           onClick={() => setActiveTab('budget')}
         >
           💰 Budget Tips
         </button>
         <button
-          className={`tab-button ${activeTab === 'shopping' ? 'active' : ''}`}
+          className={`tab ${activeTab === 'shopping' ? 'active' : ''}`}
           onClick={() => setActiveTab('shopping')}
         >
-          🛍️ Smart Shopping
+          🛒 Smart Shopping
         </button>
         <button
-          className={`tab-button ${activeTab === 'meals' ? 'active' : ''}`}
+          className={`tab ${activeTab === 'meals' ? 'active' : ''}`}
           onClick={() => setActiveTab('meals')}
         >
           📅 Meal Planning
@@ -70,86 +76,89 @@ const AIAssistant = ({ user }) => {
       </div>
 
       <div className="ai-content">
-        {error && <div className="error-alert">{error}</div>}
-
         {activeTab === 'recipes' && (
-          <div className="ai-section">
+          <div className="tab-content">
             <h3>Recipe Suggestions</h3>
-            <p>Get recipe suggestions based on items in your pantry</p>
+            <p>Get recipe ideas based on items in your pantry</p>
             <button
               className="btn-primary"
-              onClick={() => handleGetSuggestions('recipes')}
+              onClick={() => handleGetSuggestion(endpoints.recipes)}
               disabled={loading}
             >
-              {loading ? 'Loading...' : 'Get Recipes'}
+              {loading ? 'Getting suggestions...' : 'Get Recipe Ideas'}
             </button>
           </div>
         )}
 
         {activeTab === 'budget' && (
-          <div className="ai-section">
-            <h3>Budget Tips</h3>
-            <p>Get personalized money-saving tips for grocery shopping</p>
+          <div className="tab-content">
+            <h3>Budget Optimization Tips</h3>
+            <p>Get money-saving tips based on your spending</p>
             <button
               className="btn-primary"
-              onClick={() => handleGetSuggestions('budget-tips')}
+              onClick={() => handleGetSuggestion(endpoints.budget)}
               disabled={loading}
             >
-              {loading ? 'Loading...' : 'Get Tips'}
+              {loading ? 'Getting tips...' : 'Get Budget Tips'}
             </button>
           </div>
         )}
 
         {activeTab === 'shopping' && (
-          <div className="ai-section">
+          <div className="tab-content">
             <h3>Smart Shopping Recommendations</h3>
-            <p>Get smart recommendations for your next shopping trip</p>
+            <p>Optimize your shopping based on pantry items and budget</p>
             <button
               className="btn-primary"
-              onClick={() => handleGetSuggestions('smart-shopping')}
+              onClick={() => handleGetSuggestion(endpoints.shopping)}
               disabled={loading}
             >
-              {loading ? 'Loading...' : 'Get Recommendations'}
+              {loading ? 'Getting recommendations...' : 'Get Shopping Tips'}
             </button>
           </div>
         )}
 
         {activeTab === 'meals' && (
-          <div className="ai-section">
+          <div className="tab-content">
             <h3>Meal Planning</h3>
-            <p>Create a meal plan based on your pantry items</p>
+            <p>Plan your meals for the week using your pantry items</p>
             <div className="meal-days-selector">
-              <label>Days for meal plan:</label>
-              <select value={mealDays} onChange={(e) => setMealDays(e.target.value)}>
-                <option value="3">3 days</option>
-                <option value="7">7 days</option>
-                <option value="14">14 days</option>
-                <option value="30">30 days</option>
+              <label>Days to plan:</label>
+              <select value={mealDays} onChange={(e) => setMealDays(parseInt(e.target.value))}>
+                <option value={3}>3 Days</option>
+                <option value={7}>7 Days</option>
+                <option value={14}>14 Days</option>
+                <option value={30}>30 Days</option>
               </select>
             </div>
             <button
               className="btn-primary"
-              onClick={() => handleGetSuggestions('meal-plan')}
+              onClick={() => handleGetSuggestion(endpoints.meals)}
               disabled={loading}
             >
-              {loading ? 'Loading...' : 'Generate Meal Plan'}
+              {loading ? 'Creating meal plan...' : `Plan ${mealDays} Days`}
             </button>
           </div>
         )}
-
-        {result && (
-          <div className="ai-result">
-            <h4>Result:</h4>
-            <div className="result-content">
-              {typeof result === 'string' ? (
-                <pre>{result}</pre>
-              ) : (
-                JSON.stringify(result, null, 2)
-              )}
-            </div>
-          </div>
-        )}
       </div>
+
+      {result && (
+        <div className="result-container">
+          <h4>Results:</h4>
+          <div className="result-content">
+            {typeof result === 'string' ? (
+              <p>{result}</p>
+            ) : (
+              <>
+                {result.suggestions && <p>{result.suggestions}</p>}
+                {result.tips && <p>{result.tips}</p>}
+                {result.recommendations && <p>{result.recommendations}</p>}
+                {result.mealPlan && <p>{result.mealPlan}</p>}
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
