@@ -1,0 +1,40 @@
+{
+  "name": "grocery-helper",
+  "version": "1.0.0",
+  "description": "A comprehensive supermarket tracking app with pantry management, budget tracking, shopping lists, and AI assistance",
+  "main": "server/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js",
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm start",
+    "build": "cd client && npm run build",
+    "build:electron": "cd client && npm run build:electron",
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install",
+    "start-all": "concurrently \"npm run server\" \"npm run client\"",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint .",
+    "format": "prettier --write \"**/*.{js,jsx,json,css,md}\""
+  },
+  "keywords": [
+    "grocery",
+    "shopping",
+    "pantry",
+    "budget",
+    "tracking",
+    "ai",
+    "mistral"
+  ],
+  "author": "PiyushManwani",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "eslint": "^8.48.0",
+    "prettier": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
+}
