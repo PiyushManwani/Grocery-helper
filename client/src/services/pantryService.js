@@ -1,25 +1,30 @@
 import api from './api';
 
 const pantryService = {
-  getItems: (category) => {
-    const url = category ? `/pantry?category=${category}` : '/pantry';
-    return api.get(url);
+  getItems: (category = null) => {
+    const params = category ? `?category=${category}` : '';
+    return api.get(`/pantry${params}`);
   },
 
-  getExpiringItems: (days = 7) =>
-    api.get(`/pantry/expiring?days=${days}`),
+  addItem: (itemData) => {
+    return api.post('/pantry', itemData);
+  },
 
-  getByCategory: (category) =>
-    api.get(`/pantry/category/${category}`),
+  updateItem: (itemId, itemData) => {
+    return api.put(`/pantry/${itemId}`, itemData);
+  },
 
-  addItem: (itemData) =>
-    api.post('/pantry', itemData),
+  deleteItem: (itemId) => {
+    return api.delete(`/pantry/${itemId}`);
+  },
 
-  updateItem: (id, itemData) =>
-    api.put(`/pantry/${id}`, itemData),
+  getExpiringItems: (days = 7) => {
+    return api.get(`/pantry/expiring?days=${days}`);
+  },
 
-  deleteItem: (id) =>
-    api.delete(`/pantry/${id}`)
+  getByCategory: (category) => {
+    return api.get(`/pantry/category/${category}`);
+  }
 };
 
 export default pantryService;

@@ -1,20 +1,22 @@
 import api from './api';
 
 const budgetService = {
-  getBudget: (month) => {
-    const url = month ? `/budget?month=${month}` : '/budget';
-    return api.get(url);
+  getBudget: (month = null) => {
+    const params = month ? `?month=${month}` : '';
+    return api.get(`/budget${params}`);
   },
 
-  setBudgetLimit: (budgetLimit, month) =>
-    api.post('/budget/set-limit', { budgetLimit, month }),
+  setBudgetLimit: (budgetLimit, month = null) => {
+    return api.post('/budget/set-limit', { budgetLimit, month });
+  },
 
-  addExpense: (amount, category, description, month) =>
-    api.post('/budget/add-expense', { amount, category, description, month }),
+  addExpense: (expenseData) => {
+    return api.post('/budget/add-expense', expenseData);
+  },
 
-  getBudgetSummary: (month) => {
-    const url = month ? `/budget/summary?month=${month}` : '/budget/summary';
-    return api.get(url);
+  getBudgetSummary: (month = null) => {
+    const params = month ? `?month=${month}` : '';
+    return api.get(`/budget/summary${params}`);
   }
 };
 
