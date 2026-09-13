@@ -3,13 +3,14 @@ import axios from 'axios';
 
 const ShoppingList = ({ user }) => {
   const [lists, setLists] = useState([]);
-  const [selectedList, setSelectedList] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [selectedList, setSelectedList] = useState(null);
   const [showNewListForm, setShowNewListForm] = useState(false);
   const [newListData, setNewListData] = useState({
     name: '',
     description: '',
+    dueDate: '',
     store: ''
   });
   const [newItemData, setNewItemData] = useState({
@@ -39,7 +40,7 @@ const ShoppingList = ({ user }) => {
       setLists(response.data.data);
       setError('');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch shopping lists');
+      setError(err.response?.data?.message || 'Failed to fetch lists');
     } finally {
       setLoading(false);
     }
@@ -57,7 +58,7 @@ const ShoppingList = ({ user }) => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setLists([...lists, response.data.data]);
-      setNewListData({ name: '', description: '', store: '' });
+      setNewListData({ name: '', description: '', dueDate: '', store: '' });
       setShowNewListForm(false);
       setError('');
     } catch (err) {
@@ -75,11 +76,14 @@ const ShoppingList = ({ user }) => {
     try {
       const response = await axios.post(
         `${API_URL}/shopping/${selectedList._id}/items`,
-        { ...newItemData, estimatedPrice: parseFloat(newItemData.estimatedPrice) || 0 },
+        {
+          ...newItemData,
+          quantity: parseFloat(newItemData.quantity),
+          estimatedPrice: newItemData.estimatedPrice ? parseFloat(newItemData.estimatedPrice) : 0
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setSelectedList(response.data.data);
-      setLists(lists.map(l => l._id === selectedList._id ? response.data.data : l));
       setNewItemData({ name: '', quantity: '', unit: 'pieces', category: 'other', estimatedPrice: '' });
       setError('');
     } catch (err) {
@@ -88,43 +92,43 @@ const ShoppingList = ({ user }) => {
   };
 
   const handleTogglePurchased = async (itemId) => {
+    if (!selectedList) return;
+
+    const item = selectedList.items.find(i => i._id === itemId);
     try {
-      const item = selectedList.items.find(i => i._id === itemId);
       const response = await axios.put(
         `${API_URL}/shopping/${selectedList._id}/items/${itemId}`,
-        { ...item, purchased: !item.purchased },
+        { purchased: !item.purchased },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setSelectedList(response.data.data);
-      setLists(lists.map(l => l._id === selectedList._id ? response.data.data : l));
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update item');
     }
   };
 
   const handleDeleteItem = async (itemId) => {
-    if (window.confirm('Delete this item?')) {
-      try {
-        const response = await axios.delete(
-          `${API_URL}/shopping/${selectedList._id}/items/${itemId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setSelectedList(response.data.data);
-        setLists(lists.map(l => l._id === selectedList._id ? response.data.data : l));
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to delete item');
-      }
+    if (!selectedList) return;
+
+    try {
+      const response = await axios.delete(
+        `${API_URL}/shopping/${selectedList._id}/items/${itemId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSelectedList(response.data.data);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete item');
     }
   };
 
   const handleDeleteList = async (listId) => {
-    if (window.confirm('Delete this entire list?')) {
+    if (window.confirm('Are you sure you want to delete this list?')) {
       try {
         await axios.delete(`${API_URL}/shopping/${listId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setLists(lists.filter(l => l._id !== listId));
-        setSelectedList(null);
+        if (selectedList?._id === listId) setSelectedList(null);
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to delete list');
       }
@@ -138,13 +142,16 @@ const ShoppingList = ({ user }) => {
       {error && <div className="error-alert">{error}</div>}
 
       <div className="shopping-layout">
-        <div className="lists-sidebar">
-          <button
-            className="btn-primary"
-            onClick={() => setShowNewListForm(!showNewListForm)}
-          >
-            {showNewListForm ? '✕ Cancel' : '+ New List'}
-          </button>
+        <div className="lists-panel">
+          <div className="lists-header">
+            <h3>Your Lists</h3>
+            <button
+              className="btn-primary"
+              onClick={() => setShowNewListForm(!showNewListForm)}
+            >
+              {showNewListForm ? '✕ Cancel' : '+ New List'}
+            </button>
+          </div>
 
           {showNewListForm && (
             <form onSubmit={handleCreateList} className="new-list-form">
@@ -162,20 +169,25 @@ const ShoppingList = ({ user }) => {
                 onChange={(e) => setNewListData({...newListData, description: e.target.value})}
               />
               <input
+                type="date"
+                value={newListData.dueDate}
+                onChange={(e) => setNewListData({...newListData, dueDate: e.target.value})}
+              />
+              <input
                 type="text"
-                placeholder="Store"
+                placeholder="Store name"
                 value={newListData.store}
                 onChange={(e) => setNewListData({...newListData, store: e.target.value})}
               />
-              <button type="submit" className="btn-success">Create</button>
+              <button type="submit" className="btn-success">Create List</button>
             </form>
           )}
 
           <div className="lists-list">
             {loading ? (
-              <p>Loading...</p>
+              <div className="loading">Loading...</div>
             ) : lists.length === 0 ? (
-              <p className="no-lists">No shopping lists yet</p>
+              <div className="empty-state">No shopping lists yet</div>
             ) : (
               lists.map(list => (
                 <div
@@ -183,11 +195,17 @@ const ShoppingList = ({ user }) => {
                   className={`list-item ${selectedList?._id === list._id ? 'active' : ''}`}
                   onClick={() => setSelectedList(list)}
                 >
-                  <div className="list-item-header">
-                    <h4>{list.name}</h4>
-                    <span className="item-count">{list.items.length}</span>
-                  </div>
-                  <p className="list-item-status">{list.status}</p>
+                  <h4>{list.name}</h4>
+                  <p>{list.items.length} items</p>
+                  <button
+                    className="btn-delete-small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteList(list._id);
+                    }}
+                  >
+                    Delete
+                  </button>
                 </div>
               ))
             )}
@@ -198,20 +216,15 @@ const ShoppingList = ({ user }) => {
           {selectedList ? (
             <>
               <div className="list-header">
-                <div>
-                  <h3>{selectedList.name}</h3>
-                  {selectedList.store && <p>📍 {selectedList.store}</p>}
-                  {selectedList.description && <p>{selectedList.description}</p>}
+                <h3>{selectedList.name}</h3>
+                <div className="list-meta">
+                  {selectedList.store && <span>📍 {selectedList.store}</span>}
+                  {selectedList.dueDate && <span>📅 {new Date(selectedList.dueDate).toLocaleDateString()}</span>}
                 </div>
-                <button
-                  className="btn-delete"
-                  onClick={() => handleDeleteList(selectedList._id)}
-                >
-                  Delete List
-                </button>
               </div>
 
               <div className="add-item-form">
+                <h4>Add Item</h4>
                 <form onSubmit={handleAddItem}>
                   <input
                     type="text"
@@ -233,9 +246,15 @@ const ShoppingList = ({ user }) => {
                   >
                     {units.map(u => <option key={u} value={u}>{u}</option>)}
                   </select>
+                  <select
+                    value={newItemData.category}
+                    onChange={(e) => setNewItemData({...newItemData, category: e.target.value})}
+                  >
+                    {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
                   <input
                     type="number"
-                    placeholder="Est. Price"
+                    placeholder="Estimated price"
                     step="0.01"
                     value={newItemData.estimatedPrice}
                     onChange={(e) => setNewItemData({...newItemData, estimatedPrice: e.target.value})}
@@ -247,37 +266,34 @@ const ShoppingList = ({ user }) => {
               <div className="items-list">
                 <h4>Items ({selectedList.items.length})</h4>
                 {selectedList.items.length === 0 ? (
-                  <p className="no-items">No items in this list</p>
+                  <div className="empty-state">No items in this list</div>
                 ) : (
-                  selectedList.items.map(item => (
-                    <div key={item._id} className={`shopping-item ${item.purchased ? 'purchased' : ''}`}>
-                      <input
-                        type="checkbox"
-                        checked={item.purchased}
-                        onChange={() => handleTogglePurchased(item._id)}
-                      />
-                      <div className="item-info">
-                        <span className="item-name">{item.name}</span>
-                        <span className="item-qty">{item.quantity} {item.unit}</span>
-                        {item.estimatedPrice && (
-                          <span className="item-price">${item.estimatedPrice}</span>
-                        )}
-                      </div>
-                      <button
-                        className="btn-delete"
-                        onClick={() => handleDeleteItem(item._id)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))
+                  <ul>
+                    {selectedList.items.map(item => (
+                      <li key={item._id} className={`item ${item.purchased ? 'purchased' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={item.purchased}
+                          onChange={() => handleTogglePurchased(item._id)}
+                        />
+                        <span className="item-info">
+                          <strong>{item.name}</strong> - {item.quantity} {item.unit}
+                          {item.estimatedPrice && ` ($${item.estimatedPrice})`}
+                        </span>
+                        <button
+                          className="btn-delete-small"
+                          onClick={() => handleDeleteItem(item._id)}
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
             </>
           ) : (
-            <div className="no-selection">
-              <p>Select a shopping list to view items</p>
-            </div>
+            <div className="empty-state">Select a list to view items</div>
           )}
         </div>
       </div>

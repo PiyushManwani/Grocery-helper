@@ -1,125 +1,98 @@
-import React, { useState, useEffect, useContext, createContext } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import './App.css';
-
-// Pages
 import Login from './pages/Login';
 import PantryTracker from './pages/PantryTracker';
 import BudgetTracker from './pages/BudgetTracker';
 import ShoppingList from './pages/ShoppingList';
 import AIAssistant from './pages/AIAssistant';
 
-// Components
-import Navigation from './components/Navigation';
-import PrivateRoute from './components/PrivateRoute';
-
-// Create Auth Context
-export const AuthContext = createContext();
-
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [activePage, setActivePage] = useState('pantry');
   const [loading, setLoading] = useState(true);
 
-  // Check if user is authenticated on app load
   useEffect(() => {
-    const checkAuth = async () => {
+    // Check if user is already logged in
+    const storedUser = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
+    
+    if (storedUser && token) {
       try {
-        const token = localStorage.getItem('token');
-        if (token) {
-          const response = await fetch('http://localhost:5000/api/auth/verify', {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            setUser(data.data);
-            setIsAuthenticated(true);
-          } else {
-            localStorage.removeItem('token');
-            setIsAuthenticated(false);
-          }
-        }
+        setUser(JSON.parse(storedUser));
       } catch (error) {
-        console.error('Auth check error:', error);
+        console.error('Failed to parse stored user:', error);
+        localStorage.removeItem('user');
         localStorage.removeItem('token');
-        setIsAuthenticated(false);
-      } finally {
-        setLoading(false);
       }
-    };
-
-    checkAuth();
+    }
+    setLoading(false);
   }, []);
 
-  const handleLogin = (userData, token) => {
-    localStorage.setItem('token', token);
+  const handleLoginSuccess = (userData) => {
     setUser(userData);
-    setIsAuthenticated(true);
+    setActivePage('pantry');
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
     setUser(null);
-    setIsAuthenticated(false);
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    setActivePage('pantry');
   };
 
   if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="spinner"></div>
-        <p>Loading...</p>
-      </div>
-    );
+    return <div className="loading-screen">Loading...</div>;
+  }
+
+  if (!user) {
+    return <Login onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, handleLogin, handleLogout }}>
-      <Router>
-        {isAuthenticated && <Navigation />}
-        <Routes>
-          <Route
-            path="/login"
-            element={isAuthenticated ? <Navigate to="/pantry" /> : <Login />}
-          />
-          <Route
-            path="/pantry"
-            element={
-              <PrivateRoute>
-                <PantryTracker />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/budget"
-            element={
-              <PrivateRoute>
-                <BudgetTracker />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/shopping"
-            element={
-              <PrivateRoute>
-                <ShoppingList />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/ai"
-            element={
-              <PrivateRoute>
-                <AIAssistant />
-              </PrivateRoute>
-            }
-          />
-          <Route path="/" element={<Navigate to="/login" />} />
-        </Routes>
-      </Router>
-    </AuthContext.Provider>
+    <div className="app-container">
+      <nav className="navbar">
+        <div className="navbar-brand">
+          <h1>🛒 Grocery Helper</h1>
+        </div>
+        <div className="navbar-menu">
+          <button
+            className={`nav-btn ${activePage === 'pantry' ? 'active' : ''}`}
+            onClick={() => setActivePage('pantry')}
+          >
+            📦 Pantry
+          </button>
+          <button
+            className={`nav-btn ${activePage === 'budget' ? 'active' : ''}`}
+            onClick={() => setActivePage('budget')}
+          >
+            💰 Budget
+          </button>
+          <button
+            className={`nav-btn ${activePage === 'shopping' ? 'active' : ''}`}
+            onClick={() => setActivePage('shopping')}
+          >
+            🛍️ Lists
+          </button>
+          <button
+            className={`nav-btn ${activePage === 'ai' ? 'active' : ''}`}
+            onClick={() => setActivePage('ai')}
+          >
+            🤖 AI
+          </button>
+        </div>
+        <div className="navbar-user">
+          <span className="user-name">👤 {user.name}</span>
+          <button className="btn-logout" onClick={handleLogout}>Logout</button>
+        </div>
+      </nav>
+
+      <main className="main-content">
+        {activePage === 'pantry' && <PantryTracker user={user} />}
+        {activePage === 'budget' && <BudgetTracker user={user} />}
+        {activePage === 'shopping' && <ShoppingList user={user} />}
+        {activePage === 'ai' && <AIAssistant user={user} />}
+      </main>
+    </div>
   );
 }
 
