@@ -5,23 +5,27 @@ const ShoppingList = ({ user }) => {
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showForm, setShowForm] = useState(false);
   const [selectedList, setSelectedList] = useState(null);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newListData, setNewListData] = useState({ name: '', description: '', store: '' });
-  const [showItemForm, setShowItemForm] = useState(false);
-  const [itemData, setItemData] = useState({
+  const [newListData, setNewListData] = useState({
+    name: '',
+    description: '',
+    dueDate: '',
+    store: ''
+  });
+  const [newItemData, setNewItemData] = useState({
     name: '',
     quantity: '',
     unit: 'pieces',
-    category: 'vegetables',
+    category: 'other',
     estimatedPrice: ''
   });
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
   const token = localStorage.getItem('token');
 
-  const units = ['kg', 'g', 'liter', 'ml', 'pieces', 'box', 'dozen'];
   const categories = ['vegetables', 'fruits', 'dairy', 'meat', 'grains', 'spices', 'snacks', 'beverages', 'frozen', 'canned', 'other'];
+  const units = ['kg', 'g', 'liter', 'ml', 'pieces', 'box', 'dozen'];
 
   useEffect(() => {
     fetchLists();
@@ -54,8 +58,8 @@ const ShoppingList = ({ user }) => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setLists([...lists, response.data.data]);
-      setNewListData({ name: '', description: '', store: '' });
-      setShowCreateForm(false);
+      setNewListData({ name: '', description: '', dueDate: '', store: '' });
+      setShowForm(false);
       setError('');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create list');
@@ -64,7 +68,7 @@ const ShoppingList = ({ user }) => {
 
   const handleAddItem = async (e) => {
     e.preventDefault();
-    if (!selectedList || !itemData.name || !itemData.quantity) {
+    if (!selectedList || !newItemData.name || !newItemData.quantity) {
       setError('Please fill in required fields');
       return;
     }
@@ -72,12 +76,15 @@ const ShoppingList = ({ user }) => {
     try {
       const response = await axios.post(
         `${API_URL}/shopping/${selectedList._id}/items`,
-        { ...itemData, quantity: parseFloat(itemData.quantity), estimatedPrice: parseFloat(itemData.estimatedPrice || 0) },
+        {
+          ...newItemData,
+          quantity: parseFloat(newItemData.quantity),
+          estimatedPrice: newItemData.estimatedPrice ? parseFloat(newItemData.estimatedPrice) : 0
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setSelectedList(response.data.data);
-      setItemData({ name: '', quantity: '', unit: 'pieces', category: 'vegetables', estimatedPrice: '' });
-      setShowItemForm(false);
+      setNewItemData({ name: '', quantity: '', unit: 'pieces', category: 'other', estimatedPrice: '' });
       setError('');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to add item');
@@ -86,12 +93,13 @@ const ShoppingList = ({ user }) => {
 
   const handleTogglePurchased = async (itemId) => {
     if (!selectedList) return;
-
     const item = selectedList.items.find(i => i._id === itemId);
+    if (!item) return;
+
     try {
       const response = await axios.put(
         `${API_URL}/shopping/${selectedList._id}/items/${itemId}`,
-        { ...item, purchased: !item.purchased },
+        { purchased: !item.purchased },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setSelectedList(response.data.data);
@@ -100,22 +108,8 @@ const ShoppingList = ({ user }) => {
     }
   };
 
-  const handleDeleteItem = async (itemId) => {
-    if (!selectedList) return;
-
-    try {
-      const response = await axios.delete(
-        `${API_URL}/shopping/${selectedList._id}/items/${itemId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setSelectedList(response.data.data);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete item');
-    }
-  };
-
   const handleDeleteList = async (listId) => {
-    if (window.confirm('Are you sure you want to delete this list?')) {
+    if (window.confirm('Delete this shopping list?')) {
       try {
         await axios.delete(`${API_URL}/shopping/${listId}`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -128,6 +122,19 @@ const ShoppingList = ({ user }) => {
     }
   };
 
+  const handleDeleteItem = async (itemId) => {
+    if (!selectedList) return;
+    try {
+      const response = await axios.delete(
+        `${API_URL}/shopping/${selectedList._id}/items/${itemId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSelectedList(response.data.data);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete item');
+    }
+  };
+
   return (
     <div className="shopping-container">
       <h2>🛍 Shopping List</h2>
@@ -135,13 +142,16 @@ const ShoppingList = ({ user }) => {
       {error && <div className="error-alert">{error}</div>}
 
       <div className="shopping-layout">
-        <div className="lists-sidebar">
-          <button className="btn-primary" onClick={() => setShowCreateForm(!showCreateForm)}>
-            {showCreateForm ? '✕ Cancel' : '+ New List'}
-          </button>
+        <div className="lists-panel">
+          <div className="lists-header">
+            <h3>My Lists</h3>
+            <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
+              {showForm ? '✕' : '+'} New
+            </button>
+          </div>
 
-          {showCreateForm && (
-            <form onSubmit={handleCreateList} className="create-list-form">
+          {showForm && (
+            <form onSubmit={handleCreateList} className="new-list-form">
               <input
                 type="text"
                 placeholder="List name"
@@ -156,126 +166,129 @@ const ShoppingList = ({ user }) => {
                 onChange={(e) => setNewListData({...newListData, description: e.target.value})}
               />
               <input
+                type="date"
+                value={newListData.dueDate}
+                onChange={(e) => setNewListData({...newListData, dueDate: e.target.value})}
+              />
+              <input
                 type="text"
                 placeholder="Store"
                 value={newListData.store}
                 onChange={(e) => setNewListData({...newListData, store: e.target.value})}
               />
-              <button type="submit" className="btn-success">Create List</button>
+              <button type="submit" className="btn-success">Create</button>
             </form>
           )}
 
           <div className="lists-list">
-            {lists.map(list => (
-              <div
-                key={list._id}
-                className={`list-item ${selectedList?._id === list._id ? 'active' : ''}`}
-                onClick={() => setSelectedList(list)}
-              >
-                <h4>{list.name}</h4>
-                <p>{list.items.length} items</p>
-                <button
-                  className="btn-delete-small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteList(list._id);
-                  }}
+            {loading ? (
+              <div className="loading">Loading...</div>
+            ) : lists.length === 0 ? (
+              <p className="no-lists">No shopping lists yet</p>
+            ) : (
+              lists.map(list => (
+                <div
+                  key={list._id}
+                  className={`list-item ${selectedList?._id === list._id ? 'active' : ''}`}
+                  onClick={() => setSelectedList(list)}
                 >
-                  Delete
-                </button>
-              </div>
-            ))}
+                  <div className="list-info">
+                    <h4>{list.name}</h4>
+                    <p>{list.items.length} items</p>
+                  </div>
+                  <button
+                    className="btn-delete-small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteList(list._id);
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
-        <div className="list-content">
+        <div className="list-details">
           {selectedList ? (
             <>
-              <div className="list-header">
+              <div className="details-header">
                 <h3>{selectedList.name}</h3>
-                {selectedList.store && <p>Store: {selectedList.store}</p>}
-                {selectedList.description && <p>{selectedList.description}</p>}
+                <span className="status-badge">{selectedList.status}</span>
               </div>
 
-              <div className="list-summary">
-                <div className="summary-item">
-                  <strong>Total Items:</strong> {selectedList.items.length}
-                </div>
-                <div className="summary-item">
-                  <strong>Purchased:</strong> {selectedList.items.filter(i => i.purchased).length}
-                </div>
-                <div className="summary-item">
-                  <strong>Estimated Total:</strong> ${selectedList.totalEstimatedCost?.toFixed(2) || '0.00'}
-                </div>
+              {selectedList.description && <p className="list-description">{selectedList.description}</p>}
+
+              <div className="list-stats">
+                <span>🟂 Total: ${selectedList.totalEstimatedCost.toFixed(2)}</span>
+                <span>✅ {selectedList.items.filter(i => i.purchased).length}/{selectedList.items.length}</span>
               </div>
 
-              <button
-                className="btn-primary"
-                onClick={() => setShowItemForm(!showItemForm)}
-              >
-                {showItemForm ? '✕ Cancel' : '+ Add Item'}
-              </button>
-
-              {showItemForm && (
-                <form onSubmit={handleAddItem} className="item-form">
-                  <input
-                    type="text"
-                    placeholder="Item name"
-                    value={itemData.name}
-                    onChange={(e) => setItemData({...itemData, name: e.target.value})}
-                    required
-                  />
-                  <input
-                    type="number"
-                    placeholder="Quantity"
-                    value={itemData.quantity}
-                    onChange={(e) => setItemData({...itemData, quantity: e.target.value})}
-                    required
-                  />
-                  <select value={itemData.unit} onChange={(e) => setItemData({...itemData, unit: e.target.value})}>
-                    {units.map(u => <option key={u} value={u}>{u}</option>)}
-                  </select>
-                  <select value={itemData.category} onChange={(e) => setItemData({...itemData, category: e.target.value})}>
-                    {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                  </select>
-                  <input
-                    type="number"
-                    placeholder="Estimated price"
-                    value={itemData.estimatedPrice}
-                    onChange={(e) => setItemData({...itemData, estimatedPrice: e.target.value})}
-                    step="0.01"
-                  />
-                  <button type="submit" className="btn-success">Add Item</button>
-                </form>
-              )}
+              <form onSubmit={handleAddItem} className="add-item-form">
+                <input
+                  type="text"
+                  placeholder="Item name"
+                  value={newItemData.name}
+                  onChange={(e) => setNewItemData({...newItemData, name: e.target.value})}
+                  required
+                />
+                <input
+                  type="number"
+                  placeholder="Qty"
+                  value={newItemData.quantity}
+                  onChange={(e) => setNewItemData({...newItemData, quantity: e.target.value})}
+                  required
+                  step="0.1"
+                />
+                <select
+                  value={newItemData.unit}
+                  onChange={(e) => setNewItemData({...newItemData, unit: e.target.value})}
+                >
+                  {units.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+                <input
+                  type="number"
+                  placeholder="Price"
+                  value={newItemData.estimatedPrice}
+                  onChange={(e) => setNewItemData({...newItemData, estimatedPrice: e.target.value})}
+                  step="0.01"
+                />
+                <button type="submit" className="btn-success">Add</button>
+              </form>
 
               <div className="items-list">
-                {selectedList.items.map(item => (
-                  <div key={item._id} className={`shopping-item ${item.purchased ? 'purchased' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={item.purchased}
-                      onChange={() => handleTogglePurchased(item._id)}
-                    />
-                    <div className="item-info">
-                      <p className="item-name">{item.name}</p>
-                      <p className="item-details">
-                        {item.quantity} {item.unit} • {item.category}
-                        {item.estimatedPrice && ` • $${item.estimatedPrice.toFixed(2)}`}
-                      </p>
-                    </div>
-                    <button
-                      className="btn-delete-small"
-                      onClick={() => handleDeleteItem(item._id)}
+                {selectedList.items.length === 0 ? (
+                  <p className="no-items">No items in this list</p>
+                ) : (
+                  selectedList.items.map(item => (
+                    <div
+                      key={item._id}
+                      className={`item-row ${item.purchased ? 'purchased' : ''}`}
                     >
-                      Remove
-                    </button>
-                  </div>
-                ))}
+                      <input
+                        type="checkbox"
+                        checked={item.purchased}
+                        onChange={() => handleTogglePurchased(item._id)}
+                      />
+                      <div className="item-details">
+                        <p className="item-name">{item.name}</p>
+                        <p className="item-meta">{item.quantity} {item.unit} - ${item.estimatedPrice || 0}</p>
+                      </div>
+                      <button
+                        className="btn-delete-small"
+                        onClick={() => handleDeleteItem(item._id)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
             </>
           ) : (
-            <div className="empty-state">Select or create a shopping list</div>
+            <div className="empty-state">Select a list to view items</div>
           )}
         </div>
       </div>
