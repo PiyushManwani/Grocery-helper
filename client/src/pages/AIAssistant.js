@@ -2,107 +2,111 @@ import React, { useState } from 'react';
 import axios from 'axios';
 
 const AIAssistant = ({ user }) => {
+  const [activeTab, setActiveTab] = useState('recipes');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('recipes');
   const [result, setResult] = useState('');
   const [mealPlanDays, setMealPlanDays] = useState(7);
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
   const token = localStorage.getItem('token');
 
-  const handleGetSuggestions = async (endpoint, params = {}) => {
+  const handleGetRecipes = async () => {
     try {
       setLoading(true);
       setError('');
-      setResult('');
-
       const response = await axios.post(
-        `${API_URL}/ai/${endpoint}`,
-        params,
+        `${API_URL}/ai/recipes`,
+        {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      setResult(response.data.data);
+      setResult(response.data.data.suggestions);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to get suggestions');
+      setError(err.response?.data?.message || 'Failed to get recipe suggestions');
     } finally {
       setLoading(false);
     }
   };
 
-  const renderResult = () => {
-    if (!result) return null;
-
-    if (typeof result === 'string') {
-      return <p className="result-text">{result}</p>;
+  const handleGetBudgetTips = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await axios.post(
+        `${API_URL}/ai/budget-tips`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setResult(response.data.data.tips);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to get budget tips');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    return (
-      <div className="result-content">
-        {result.suggestions && (
-          <div className="result-section">
-            <h4>Suggestions:</h4>
-            <p>{result.suggestions}</p>
-          </div>
-        )}
-        {result.tips && (
-          <div className="result-section">
-            <h4>Tips:</h4>
-            <p>{result.tips}</p>
-          </div>
-        )}
-        {result.recommendations && (
-          <div className="result-section">
-            <h4>Recommendations:</h4>
-            <p>{result.recommendations}</p>
-          </div>
-        )}
-        {result.mealPlan && (
-          <div className="result-section">
-            <h4>Meal Plan:</h4>
-            <p>{result.mealPlan}</p>
-          </div>
-        )}
-        {result.budgetStatus && (
-          <div className="result-section">
-            <h4>Budget Status:</h4>
-            <p>Spent: ${result.budgetStatus.spent.toFixed(2)} / ${result.budgetStatus.limit.toFixed(2)} ({result.budgetStatus.percentageUsed}%)</p>
-          </div>
-        )}
-      </div>
-    );
+  const handleGetSmartShopping = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await axios.post(
+        `${API_URL}/ai/smart-shopping`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setResult(response.data.data.recommendations);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to get smart shopping recommendations');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGetMealPlan = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await axios.post(
+        `${API_URL}/ai/meal-plan?days=${mealPlanDays}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setResult(response.data.data.mealPlan);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to get meal plan');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="ai-assistant-container">
-      <h2>🤖 AI Assistant</h2>
-      <p className="ai-description">Get personalized suggestions powered by Mistral AI</p>
+    <div className="ai-container">
+      <h2>✨ AI Assistant</h2>
 
       {error && <div className="error-alert">{error}</div>}
 
       <div className="ai-tabs">
         <button
-          className={`tab-button ${activeTab === 'recipes' ? 'active' : ''}`}
-          onClick={() => { setActiveTab('recipes'); setResult(''); }}
+          className={`tab ${activeTab === 'recipes' ? 'active' : ''}`}
+          onClick={() => setActiveTab('recipes')}
         >
           🍳 Recipes
         </button>
         <button
-          className={`tab-button ${activeTab === 'budget' ? 'active' : ''}`}
-          onClick={() => { setActiveTab('budget'); setResult(''); }}
+          className={`tab ${activeTab === 'budget' ? 'active' : ''}`}
+          onClick={() => setActiveTab('budget')}
         >
           💰 Budget Tips
         </button>
         <button
-          className={`tab-button ${activeTab === 'shopping' ? 'active' : ''}`}
-          onClick={() => { setActiveTab('shopping'); setResult(''); }}
+          className={`tab ${activeTab === 'shopping' ? 'active' : ''}`}
+          onClick={() => setActiveTab('shopping')}
         >
-          🛒 Smart Shopping
+          🛍️ Smart Shopping
         </button>
         <button
-          className={`tab-button ${activeTab === 'meal' ? 'active' : ''}`}
-          onClick={() => { setActiveTab('meal'); setResult(''); }}
+          className={`tab ${activeTab === 'mealplan' ? 'active' : ''}`}
+          onClick={() => setActiveTab('mealplan')}
         >
           📅 Meal Plan
         </button>
@@ -112,27 +116,27 @@ const AIAssistant = ({ user }) => {
         {activeTab === 'recipes' && (
           <div className="tab-content">
             <h3>Recipe Suggestions</h3>
-            <p>Get recipe ideas based on items in your pantry</p>
+            <p>Get recipe ideas based on your pantry items</p>
             <button
-              className="btn-primary btn-large"
-              onClick={() => handleGetSuggestions('recipes')}
+              className="btn-primary"
+              onClick={handleGetRecipes}
               disabled={loading}
             >
-              {loading ? '⏳ Getting suggestions...' : '🎯 Get Recipes'}
+              {loading ? 'Generating...' : 'Get Recipes'}
             </button>
           </div>
         )}
 
         {activeTab === 'budget' && (
           <div className="tab-content">
-            <h3>Money-Saving Tips</h3>
-            <p>Get personalized budget tips based on your spending</p>
+            <h3>Budget Money-Saving Tips</h3>
+            <p>Get practical tips to reduce your grocery spending</p>
             <button
-              className="btn-primary btn-large"
-              onClick={() => handleGetSuggestions('budget-tips')}
+              className="btn-primary"
+              onClick={handleGetBudgetTips}
               disabled={loading}
             >
-              {loading ? '⏳ Getting tips...' : '💡 Get Budget Tips'}
+              {loading ? 'Generating...' : 'Get Tips'}
             </button>
           </div>
         )}
@@ -140,37 +144,39 @@ const AIAssistant = ({ user }) => {
         {activeTab === 'shopping' && (
           <div className="tab-content">
             <h3>Smart Shopping Recommendations</h3>
-            <p>Get suggestions for optimized shopping</p>
+            <p>Get smart suggestions based on your pantry and budget</p>
             <button
-              className="btn-primary btn-large"
-              onClick={() => handleGetSuggestions('smart-shopping')}
+              className="btn-primary"
+              onClick={handleGetSmartShopping}
               disabled={loading}
             >
-              {loading ? '⏳ Getting recommendations...' : '🎯 Get Recommendations'}
+              {loading ? 'Generating...' : 'Get Recommendations'}
             </button>
           </div>
         )}
 
-        {activeTab === 'meal' && (
+        {activeTab === 'mealplan' && (
           <div className="tab-content">
-            <h3>Meal Plan Generator</h3>
-            <p>Generate a meal plan for your pantry items</p>
-            <div className="meal-plan-control">
+            <h3>Meal Planning</h3>
+            <p>Generate a meal plan based on your pantry items</p>
+            <div className="meal-plan-input">
               <label>
                 Days to plan:
-                <select value={mealPlanDays} onChange={(e) => setMealPlanDays(parseInt(e.target.value))}>
-                  <option value={3}>3 days</option>
-                  <option value={7}>7 days</option>
-                  <option value={14}>14 days</option>
-                </select>
+                <input
+                  type="number"
+                  min="1"
+                  max="30"
+                  value={mealPlanDays}
+                  onChange={(e) => setMealPlanDays(parseInt(e.target.value))}
+                />
               </label>
             </div>
             <button
-              className="btn-primary btn-large"
-              onClick={() => handleGetSuggestions('meal-plan', { days: mealPlanDays })}
+              className="btn-primary"
+              onClick={handleGetMealPlan}
               disabled={loading}
             >
-              {loading ? '⏳ Generating meal plan...' : '📋 Generate Meal Plan'}
+              {loading ? 'Generating...' : `Get ${mealPlanDays}-Day Plan`}
             </button>
           </div>
         )}
@@ -178,8 +184,16 @@ const AIAssistant = ({ user }) => {
 
       {result && (
         <div className="ai-result">
-          <h3>AI Suggestion</h3>
-          {renderResult()}
+          <h4>AI Response:</h4>
+          <div className="result-content">
+            <p>{result}</p>
+          </div>
+          <button
+            className="btn-secondary"
+            onClick={() => setResult('')}
+          >
+            Clear
+          </button>
         </div>
       )}
     </div>
